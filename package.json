@@ -1,0 +1,15 @@
+{
+  "name": "ski-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @workspace/ski-service dev\" \"pnpm --filter @workspace/api-server dev\"",
+    "build": "pnpm -r --if-present run build",
+    "db:push": "pnpm --filter @workspace/db run push",
+    "typecheck": "pnpm -r --if-present run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "~5.9.2"
+  }
+}

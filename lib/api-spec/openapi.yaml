@@ -1,0 +1,884 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Ski & Snowboard Service Management API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: tickets
+    description: Service ticket operations
+  - name: settings
+    description: Settings management
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /tickets:
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      summary: List all tickets
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: serviceType
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+        - name: contactStatus
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+    post:
+      operationId: createTicket
+      tags: [tickets]
+      summary: Create a new ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketBody"
+      responses:
+        "201":
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}:
+    get:
+      operationId: getTicket
+      tags: [tickets]
+      summary: Get a ticket by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "404":
+          description: Ticket not found
+    put:
+      operationId: updateTicket
+      tags: [tickets]
+      summary: Update a ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTicketBody"
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "403":
+          description: Locked - password required
+        "404":
+          description: Ticket not found
+    delete:
+      operationId: deleteTicket
+      tags: [tickets]
+      summary: Delete a ticket (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+              required: [password]
+      responses:
+        "200":
+          description: Ticket deleted
+        "403":
+          description: Unauthorized
+
+  /tickets/{id}/unlock:
+    post:
+      operationId: unlockTicket
+      tags: [tickets]
+      summary: Unlock a locked ticket section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                section:
+                  type: string
+              required: [password, section]
+      responses:
+        "200":
+          description: Unlock result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  role:
+                    type: string
+                required: [success]
+        "403":
+          description: Invalid password
+
+  /tickets/stats:
+    get:
+      operationId: getTicketStats
+      tags: [tickets]
+      summary: Get ticket statistics for dashboard
+      responses:
+        "200":
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketStats"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get application settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update settings (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        "403":
+          description: Unauthorized
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketNumber:
+          type: string
+        serviceType:
+          type: string
+          enum: [ski_full, ski_service, snowboard_service]
+        status:
+          type: string
+          enum: [received, in_progress, ready_for_pickup, completed]
+        employeeInitials:
+          type: string
+        dropoffDate:
+          type: string
+        promiseDate:
+          type: string
+          nullable: true
+        willCall:
+          type: boolean
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        customerAddress:
+          type: string
+          nullable: true
+        customerCity:
+          type: string
+          nullable: true
+        customerProvince:
+          type: string
+          nullable: true
+        customerPostal:
+          type: string
+          nullable: true
+        customerWeight:
+          type: string
+          nullable: true
+        customerHeight:
+          type: string
+          nullable: true
+        customerSignature:
+          type: string
+          nullable: true
+        customerSignatureRole:
+          type: string
+          nullable: true
+        customerSignatureTimestamp:
+          type: string
+          nullable: true
+        customerWaiverAccepted:
+          type: boolean
+        skiBrand:
+          type: string
+          nullable: true
+        skiModel:
+          type: string
+          nullable: true
+        skiColor:
+          type: string
+          nullable: true
+        skiOwnership:
+          type: string
+          nullable: true
+        bootBrand:
+          type: string
+          nullable: true
+        bootModel:
+          type: string
+          nullable: true
+        bootColor:
+          type: string
+          nullable: true
+        bootOwnership:
+          type: string
+          nullable: true
+        bootOutsoleLength:
+          type: string
+          nullable: true
+        snowboardBrand:
+          type: string
+          nullable: true
+        snowboardModel:
+          type: string
+          nullable: true
+        snowboardColor:
+          type: string
+          nullable: true
+        skiPrice:
+          type: number
+          nullable: true
+        bootPrice:
+          type: number
+          nullable: true
+        services:
+          type: array
+          items:
+            type: string
+        customServices:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              price:
+                type: number
+            required: [name, price]
+        serviceAdjustments:
+          type: object
+          additionalProperties:
+            type: number
+          nullable: true
+        expressService:
+          type: boolean
+        ptexPrice:
+          type: number
+          nullable: true
+        taxRate:
+          type: number
+        taxExempt:
+          type: boolean
+        skiClassification:
+          type: string
+          nullable: true
+        dinFrontLeft:
+          type: number
+          nullable: true
+        dinFrontRight:
+          type: number
+          nullable: true
+        dinRearLeft:
+          type: number
+          nullable: true
+        dinRearRight:
+          type: number
+          nullable: true
+        bindingBrand:
+          type: string
+          nullable: true
+        bindingModel:
+          type: string
+          nullable: true
+        techInitials:
+          type: string
+          nullable: true
+        techSignature:
+          type: string
+          nullable: true
+        techSignatureTimestamp:
+          type: string
+          nullable: true
+        techCompletionDate:
+          type: string
+          nullable: true
+        techNotes:
+          type: string
+          nullable: true
+        pickupSignature:
+          type: string
+          nullable: true
+        pickupSignatureRole:
+          type: string
+          nullable: true
+        pickupSignatureTimestamp:
+          type: string
+          nullable: true
+        pickupWaiverAccepted:
+          type: boolean
+        contactStatus:
+          type: string
+          enum: [none, needs_contact, called_no_answer, called_waiting, resolved]
+          nullable: true
+        lastContactAttempt:
+          type: string
+          nullable: true
+        contactNotes:
+          type: string
+          nullable: true
+        equipmentDescription:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        lockedSections:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - ticketNumber
+        - serviceType
+        - status
+        - dropoffDate
+        - willCall
+        - customerWaiverAccepted
+        - pickupWaiverAccepted
+        - taxExempt
+        - expressService
+        - services
+        - customServices
+        - lockedSections
+        - createdAt
+        - updatedAt
+
+    CreateTicketBody:
+      type: object
+      properties:
+        serviceType:
+          type: string
+          enum: [ski_full, ski_service, snowboard_service]
+        employeeInitials:
+          type: string
+        dropoffDate:
+          type: string
+        promiseDate:
+          type: string
+          nullable: true
+        willCall:
+          type: boolean
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        customerAddress:
+          type: string
+          nullable: true
+        customerCity:
+          type: string
+          nullable: true
+        customerProvince:
+          type: string
+          nullable: true
+        customerPostal:
+          type: string
+          nullable: true
+        customerWeight:
+          type: string
+          nullable: true
+        customerHeight:
+          type: string
+          nullable: true
+        skiBrand:
+          type: string
+          nullable: true
+        skiModel:
+          type: string
+          nullable: true
+        skiColor:
+          type: string
+          nullable: true
+        skiOwnership:
+          type: string
+          nullable: true
+        bootBrand:
+          type: string
+          nullable: true
+        bootModel:
+          type: string
+          nullable: true
+        bootColor:
+          type: string
+          nullable: true
+        bootOwnership:
+          type: string
+          nullable: true
+        bootOutsoleLength:
+          type: string
+          nullable: true
+        snowboardBrand:
+          type: string
+          nullable: true
+        snowboardModel:
+          type: string
+          nullable: true
+        snowboardColor:
+          type: string
+          nullable: true
+        skiPrice:
+          type: number
+          nullable: true
+        bootPrice:
+          type: number
+          nullable: true
+        services:
+          type: array
+          items:
+            type: string
+        customServices:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              price:
+                type: number
+            required: [name, price]
+        serviceAdjustments:
+          type: object
+          additionalProperties:
+            type: number
+          nullable: true
+        expressService:
+          type: boolean
+        ptexPrice:
+          type: number
+          nullable: true
+        taxRate:
+          type: number
+        taxExempt:
+          type: boolean
+        skiClassification:
+          type: string
+          nullable: true
+        dinFrontLeft:
+          type: number
+          nullable: true
+        dinFrontRight:
+          type: number
+          nullable: true
+        dinRearLeft:
+          type: number
+          nullable: true
+        dinRearRight:
+          type: number
+          nullable: true
+        bindingBrand:
+          type: string
+          nullable: true
+        bindingModel:
+          type: string
+          nullable: true
+        techInitials:
+          type: string
+          nullable: true
+        techNotes:
+          type: string
+          nullable: true
+        equipmentDescription:
+          type: string
+          nullable: true
+      required: [serviceType, willCall, taxExempt, expressService, services, customServices]
+
+    UpdateTicketBody:
+      type: object
+      properties:
+        serviceType:
+          type: string
+          enum: [ski_full, ski_service, snowboard_service]
+        status:
+          type: string
+          enum: [received, in_progress, ready_for_pickup, completed]
+        employeeInitials:
+          type: string
+        dropoffDate:
+          type: string
+        promiseDate:
+          type: string
+          nullable: true
+        willCall:
+          type: boolean
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        customerAddress:
+          type: string
+          nullable: true
+        customerCity:
+          type: string
+          nullable: true
+        customerProvince:
+          type: string
+          nullable: true
+        customerPostal:
+          type: string
+          nullable: true
+        customerWeight:
+          type: string
+          nullable: true
+        customerHeight:
+          type: string
+          nullable: true
+        customerSignature:
+          type: string
+          nullable: true
+        customerSignatureRole:
+          type: string
+          nullable: true
+        customerSignatureTimestamp:
+          type: string
+          nullable: true
+        customerWaiverAccepted:
+          type: boolean
+        skiBrand:
+          type: string
+          nullable: true
+        skiModel:
+          type: string
+          nullable: true
+        skiColor:
+          type: string
+          nullable: true
+        skiOwnership:
+          type: string
+          nullable: true
+        bootBrand:
+          type: string
+          nullable: true
+        bootModel:
+          type: string
+          nullable: true
+        bootColor:
+          type: string
+          nullable: true
+        bootOwnership:
+          type: string
+          nullable: true
+        bootOutsoleLength:
+          type: string
+          nullable: true
+        snowboardBrand:
+          type: string
+          nullable: true
+        snowboardModel:
+          type: string
+          nullable: true
+        snowboardColor:
+          type: string
+          nullable: true
+        skiPrice:
+          type: number
+          nullable: true
+        bootPrice:
+          type: number
+          nullable: true
+        services:
+          type: array
+          items:
+            type: string
+        customServices:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              price:
+                type: number
+            required: [name, price]
+        serviceAdjustments:
+          type: object
+          additionalProperties:
+            type: number
+          nullable: true
+        expressService:
+          type: boolean
+        ptexPrice:
+          type: number
+          nullable: true
+        taxRate:
+          type: number
+        taxExempt:
+          type: boolean
+        skiClassification:
+          type: string
+          nullable: true
+        dinFrontLeft:
+          type: number
+          nullable: true
+        dinFrontRight:
+          type: number
+          nullable: true
+        dinRearLeft:
+          type: number
+          nullable: true
+        dinRearRight:
+          type: number
+          nullable: true
+        bindingBrand:
+          type: string
+          nullable: true
+        bindingModel:
+          type: string
+          nullable: true
+        techInitials:
+          type: string
+          nullable: true
+        techSignature:
+          type: string
+          nullable: true
+        techSignatureTimestamp:
+          type: string
+          nullable: true
+        techCompletionDate:
+          type: string
+          nullable: true
+        techNotes:
+          type: string
+          nullable: true
+        pickupSignature:
+          type: string
+          nullable: true
+        pickupSignatureRole:
+          type: string
+          nullable: true
+        pickupSignatureTimestamp:
+          type: string
+          nullable: true
+        pickupWaiverAccepted:
+          type: boolean
+        contactStatus:
+          type: string
+          enum: [none, needs_contact, called_no_answer, called_waiting, resolved]
+          nullable: true
+        lastContactAttempt:
+          type: string
+          nullable: true
+        contactNotes:
+          type: string
+          nullable: true
+        equipmentDescription:
+          type: string
+          nullable: true
+        password:
+          type: string
+          nullable: true
+
+    TicketStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        received:
+          type: integer
+        inProgress:
+          type: integer
+        readyForPickup:
+          type: integer
+        completed:
+          type: integer
+        byServiceType:
+          type: object
+          properties:
+            ski_full:
+              type: integer
+            ski_service:
+              type: integer
+            snowboard_service:
+              type: integer
+          required: [ski_full, ski_service, snowboard_service]
+        todayCount:
+          type: integer
+      required:
+        - total
+        - received
+        - inProgress
+        - readyForPickup
+        - completed
+        - byServiceType
+        - todayCount
+
+    Settings:
+      type: object
+      properties:
+        taxRate:
+          type: number
+        staffPassword:
+          type: string
+        adminPassword:
+          type: string
+        customServices:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              defaultPrice:
+                type: number
+            required: [name, defaultPrice]
+        autoLockMinutes:
+          type: integer
+        shopName:
+          type: string
+        waiverUrl:
+          type: string
+      required:
+        - taxRate
+        - staffPassword
+        - adminPassword
+        - customServices
+        - autoLockMinutes
+        - shopName
+        - waiverUrl
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        password:
+          type: string
+        taxRate:
+          type: number
+        staffPassword:
+          type: string
+        adminPassword:
+          type: string
+        customServices:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              defaultPrice:
+                type: number
+            required: [name, defaultPrice]
+        autoLockMinutes:
+          type: integer
+        shopName:
+          type: string
+        waiverUrl:
+          type: string
+      required: [password]
