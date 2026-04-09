@@ -1,2 +1,5 @@
-[options]
+[packages]
+pnpm = "latest"
+
+[build]
 packageManager = "pnpm"
